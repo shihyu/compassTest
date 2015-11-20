@@ -6,6 +6,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
@@ -13,69 +14,92 @@ import android.widget.TextView;
 
 public class Main extends Activity implements SensorEventListener {
 
-    private ImageView image;
-    // ªì©l¨¤«×
-    private float currentDegree = 0f;
-    // ·PÀ³¾¹ºŞ²z
-    private SensorManager mSensorManager;
+	private ImageView image;
+	// åˆå§‹è§’åº¦
+	private float currentDegree = 0f;
+	// æ„Ÿæ‡‰å™¨ç®¡ç†
+	private SensorManager mSensorManager;
 
-    private TextView tvHeading;
+	private TextView tvHeading;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+	float[] mGravity;
+	float[] mGeomagnetic;
+	float Rotation[] = new float[9];
+	float[] degree = new float[3];
 
-        image = (ImageView) findViewById(R.id.imageViewCompass);
-        tvHeading = (TextView) findViewById(R.id.tvHeading);
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-    }
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+		image = (ImageView) findViewById(R.id.imageViewCompass);
+		tvHeading = (TextView) findViewById(R.id.tvHeading);
+		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+	}
 
-        // µù¥U·PÀ³ºÊÅ¥¾¹
-        mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
-                SensorManager.SENSOR_DELAY_GAME);
-    }
+	@Override
+	protected void onResume() {
+		super.onResume();
 
-    @Override
-    protected void onPause() {
-        super.onPause();
+		// è¨»å†Šæ„Ÿæ‡‰ç›£è½å™¨
 
-        // °±¤î·PÀ³ºÊÅ¥¾¹
-        mSensorManager.unregisterListener(this);
-    }
+		Sensor accelerometer = mSensorManager
+				.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+		Sensor magnetometer = mSensorManager
+				.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
-    public void onSensorChanged(SensorEvent event) {
+		mSensorManager.registerListener(this, accelerometer,
+				SensorManager.SENSOR_DELAY_GAME);
+		mSensorManager.registerListener(this, magnetometer,
+				SensorManager.SENSOR_DELAY_GAME);
+	}
 
-        //Àò±oz¶bªº¨¤«×
-        float degree = Math.round(event.values[0]);
+	@Override
+	protected void onPause() {
+		super.onPause();
 
-        tvHeading.setText("Heading: " + Float.toString(degree) + " degrees");
+		// åœæ­¢æ„Ÿæ‡‰ç›£è½å™¨
+		mSensorManager.unregisterListener(this);
+	}
 
-        // currentDegree-ªì©l¨¤«×,-degree°f®É°w±ÛÂàµ²§ô¨¤«×
-        RotateAnimation ra = new RotateAnimation(
-                currentDegree,
-                -degree,
-                Animation.RELATIVE_TO_SELF, 0.5f,   //x®y¼Ğ
-                Animation.RELATIVE_TO_SELF, 0.5f);  //y®y¼Ğ
+	public void onSensorChanged(SensorEvent event) {
 
-        // Âà°Ê®É¶¡
-        ra.setDuration(210);
+		if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+			mGravity = event.values;
+		}
+		if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+			mGeomagnetic = event.values;
+		}
+		if (mGravity != null && mGeomagnetic != null) {
 
-        // ¹w³]ª¬ºAµ²§ô«áªº°Ê§@³]©w
-        ra.setFillAfter(true);
+			SensorManager.getRotationMatrix(Rotation, null, mGravity,
+					mGeomagnetic);
+			SensorManager.getOrientation(Rotation, degree);
 
-        // ±N°Ê§@©ñ¤J¹Ï¤ù
-        image.startAnimation(ra);
-        currentDegree = -degree;
+			degree[0] = (float) Math.toDegrees(degree[0]);
 
-    }
 
-    /*§ïÅÜ¸g½T«×*/
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // not in use
-    }
+			tvHeading.setText("Heading: " + (int) degree[0] + " degrees");
+
+			// currentDegree-åˆå§‹è§’åº¦,-degreeé€†æ™‚é‡æ—‹è½‰çµæŸè§’åº¦
+			RotateAnimation ra = new RotateAnimation(currentDegree, -degree[0],
+					Animation.RELATIVE_TO_SELF, 0.5f, // xåº§æ¨™
+					Animation.RELATIVE_TO_SELF, 0.5f); // yåº§æ¨™
+
+			// è½‰å‹•æ™‚é–“
+			ra.setDuration(210);
+
+			// é è¨­ç‹€æ…‹çµæŸå¾Œçš„å‹•ä½œè¨­å®š
+			ra.setFillAfter(true);
+
+			// å°‡å‹•ä½œæ”¾å…¥åœ–ç‰‡
+			image.startAnimation(ra);
+			currentDegree = -degree[0];
+		}
+	}
+
+	/* æ”¹è®Šç¶“ç¢ºåº¦ */
+	public void onAccuracyChanged(Sensor sensor, int accuracy) {
+		// not in use
+	}
 }
